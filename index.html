@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Berlin Geekettes Hackathon | PAYMILL Live Demo</title>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+  <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/css/bootstrap.no-responsive.no-icons.min.css">
+
+
+  <!--
+  PAYMILL public API key (Cockpit -> Settings -> API-Keys)
+  -->
+  <script type="text/javascript">
+      var PAYMILL_PUBLIC_KEY = '<YOUR-PUBLIC-KEY>';
+  </script>
+
+
+
+  <!--
+  PAYMILL bridge (JavaScript lib for the card tokenization)
+  -->
+
+  <script src="https://bridge.paymill.com/"></script>
+
+
+
+</head>
+<body style="background-color: #ec4f00; padding: 15px 40px; color: #fff; font-family: Arial;">
+  <img src="img/glogo.png" style="margin-bottom: 30px; height: 120px;">
+  <img src="img/logo.png" style="margin: 30px 15px; height: 50px;">
+  <br>
+  <div class="container span7" style="color: #000;">
+    <div class="controls">
+      <div class="span4">
+        <div class="payment-errors text-error"></div>
+      </div>
+    </div>
+    <div class="clearfix"></div>
+    <div class="well span5">
+      <div class="controls controls-row">
+        <div class="btn-group span4">
+          <button id="btn-paymenttype-cc"  class="paymenttype btn btn-primary disabled" value="cc">Credit card</button>
+          <button id="btn-paymenttype-elv" class="paymenttype btn" value="elv">ELV</button>
+        </div><br /><br />
+      </div>
+
+      <!-- Start: Payment form -->
+
+      <form id="payment-form" action="request.php" method="POST">
+        <div class="clearfix"></div>
+
+
+        <!--
+        Start: CREDIT CARD FORM
+        -->
+
+        <div id="payment-form-cc">
+          <input class="card-amount-int" type="hidden" value="15"/>
+          <input class="card-currency" type="hidden" value="EUR"/>
+          <div class="controls controls-row">
+            <div class="span3"><label>Card number</label>
+                <input class="card-number span3" type="text" size="20" value="4111111111111111"/>
+            </div>
+            <div class="span1"><label>CVC</label>
+                <input class="card-cvc span1" type="text" size="4" value="111"/>
+            </div>
+          </div>
+          <div class="controls">
+            <div class="span4">
+              <label>Card holder</label>
+              <input class="card-holdername span4" type="text" size="20" value="Max Mustermann"/>
+            </div>
+          </div>
+          <div class="controls">
+            <div class="span3">
+              <label>Valid until (MM/YYYY)</label>
+              <input class="card-expiry-month span1" type="text" size="2" value="12"/>
+              <span> / </span>
+              <input class="card-expiry-year span1" type="text" size="4" value="2015"/>
+            </div>
+          </div>
+        </div>
+
+
+        <!--
+        End: CREDIT CARD FORM
+        -->
+
+
+
+        <div id="payment-form-elv" style="display: none;">
+          <div class="controls">
+            <div class="span3">
+              <label>Account holder</label>
+              <input class="elv-holdername span3" type="text" size="20" value="Max Mustermann"/>
+            </div>
+          </div>
+          <div class="controls controls-row">
+            <div class="span3"><label>Account number</label>
+                <input class="elv-account span3" type="text" size="20" value="1234567890"/>
+            </div>
+          </div>
+          <div class="controls">
+            <div class="span3">
+              <label>Bank code</label>
+              <input class="elv-bankcode span3" type="text" size="20" value="40050150"/>
+            </div>
+          </div>
+        </div>
+        <div class="controls">
+          <div class="span3">
+            <button class="submit-button btn btn-primary" type="submit">Buy now</button> (0,15 EUR)
+          </div>
+        </div>
+      </form>
+
+      <!-- End: Payment form -->
+
+    </div>
+
+  </div>
+
+  <div class="row" style="font-size: 120%;">
+
+      <strong>&lt; Online payments made easy /&gt;</strong><br><br>
+
+      1. Build a nice credit card <strong>form</strong><br>
+      2. Include the PAYMILL <strong>brigde</strong> (for tokenizatoin)<br>
+      3. Include one of our <strong>API Wrappers</strong> e.g. PHP, Ruby, node.js, JAVA etc. (optional)<br>
+      4. <strong>Do a transaction</strong> using the received token<br>
+      5. Be happy about the <strong>simplicity</strong> and win a Kindle Fire :)<br>
+      <br><br>
+
+      Please ask me if you need more help:<br><br>
+      Tschela Baumann<br>
+      E-Mail: tschela.baumann@paymill.com<br>
+      Twitter: paymill_tb<br>
+      Visit: www.paymill.com<br>
+      Github: github.com/paymill
+  </div>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+  <script src="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/js/bootstrap.min.js"></script>
+
+
+
+  <script language="javascript" type="text/javascript">
+      $(document).ready(function () {
+
+          //
+          // Use brigde functions to receive the token
+          //
+
+
+          $("#payment-form").submit(function (event) {
+
+              // Deactivate the submit button to avoid further clicks
+              $('.submit-button').attr("disabled", "disabled");
+              if (false == paymill.validateCardNumber($('.card-number').val())) {
+                  $(".payment-errors").text("Invalid card number");
+                  $(".submit-button").removeAttr("disabled");
+                  return false;
+              }
+
+              if (false == paymill.validateExpiry($('.card-expiry-month').val(), $('.card-expiry-year').val())) {
+                  $(".payment-errors").text("Invalid date of expiry");
+                  $(".submit-button").removeAttr("disabled");
+                  return false;
+              }
+
+              paymenttype = $('.paymenttype.disabled').length ? $('.paymenttype.disabled').val() : 'cc';
+              switch (paymenttype) {
+                  case "cc":
+                      var params = {
+                          amount_int:     $('.card-amount-int').val(),  // E.g. "15" for 0.15 Eur
+                          //amount:         $('.card-amount').val(),    // deprecated!
+                          currency:       $('.card-currency').val(),    // ISO 4217 e.g. "EUR"
+                          number:         $('.card-number').val(),
+                          exp_month:      $('.card-expiry-month').val(),
+                          exp_year:       $('.card-expiry-year').val(),
+                          cvc:            $('.card-cvc').val(),
+                          cardholder:     $('.card-holdername').val()
+                      };
+                      break;
+
+                  case "elv":
+                      var params = {
+                          number:         $('.elv-account').val(),
+                          bank:           $('.elv-bankcode').val(),
+                          accountholder:  $('.elv-holdername').val()
+                      };
+                      break;
+              }
+
+
+              paymill.createToken(params, PaymillResponseHandler);
+
+              return false;
+          });
+
+
+          //
+          // Start: Response handler
+          //
+
+          function PaymillResponseHandler(error, result) {
+              if (error) {
+                  // Show the error message above the form
+                  $(".payment-errors").text(error.apierror);
+              } else {
+                  $(".payment-errors").text("");
+                  var form = $("#payment-form");
+                  // Token
+                  var token = result.token;
+                  // Insert token into the payment form
+                  form.append("<input type='hidden' name='paymillToken' value='" + token + "'/>");
+                  form.get(0).submit();
+              }
+              $(".submit-button").removeAttr("disabled");
+          }
+
+
+
+
+
+          // Toggle buttons and forms
+          $(".paymenttype").click(function (event) {
+              $(this).addClass('btn-primary disabled');
+              $('#payment-form-cc').toggle();
+              $('#payment-form-elv').toggle();
+              if($(this).val()=='cc') {
+                  $('#btn-paymenttype-elv').removeClass('btn-primary disabled');
+              }
+              else {
+                  $('#btn-paymenttype-cc').removeClass('btn-primary disabled');
+              }
+          });
+      });
+  </script>
+</body>
+</html>
